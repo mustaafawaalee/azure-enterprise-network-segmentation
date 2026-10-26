@@ -106,7 +106,7 @@ azure-enterprise-network-segmentation/
 - `teardown.sh` provides controlled resource group cleanup.
 - `screenshots/` contains evidence captured during implementation and validation.
 
-The teardown script should be added before treating this repository structure as complete.
+All three Bash automation scripts have been committed to the repository.
 
 ## How to Run
 
@@ -190,9 +190,9 @@ After saving project evidence and reviewing the resource group contents:
 bash scripts/teardown.sh
 ```
 
-The teardown script is intended to request confirmation before deleting the dedicated lab resource group.
+The teardown script requests confirmation before deleting the dedicated lab resource group.
 
-**Status:** Teardown execution has not been verified.
+**Status:** Teardown script committed. Execution has not been verified.
 
 Deleting the resource group permanently removes the Azure resources contained within it.
 
@@ -250,6 +250,18 @@ I created and executed a Bash validation script that checks the NSG rules and su
 These results demonstrate that the checked Azure configuration properties matched the expected values.
 
 They do not establish that actual network packets were blocked.
+
+### Validation Evidence
+
+The Bash validation script was executed against the deployed Azure infrastructure.
+
+All eight automated configuration checks passed.
+
+Supporting evidence is available in the repository's [validation screenshots](screenshots/).
+
+The screenshots document the observed Azure configuration and automated verification output.
+
+**Validation limitation:** These checks confirm Azure resource configuration only. Live network connectivity testing has not been performed.
 
 ## Design Decisions
 
