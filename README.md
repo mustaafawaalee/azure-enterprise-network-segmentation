@@ -2,31 +2,33 @@
 
 ## Project Overview
 
-This hands-on Azure infrastructure project demonstrates how network segmentation and Network Security Groups (NSGs) can be used to reduce unnecessary access between application and administrative environments.
+This hands-on Azure networking project demonstrates how Virtual Networks, subnets, and Network Security Groups (NSGs) can be used to restrict unnecessary communication between application and administrative infrastructure.
 
-The lab simulates an enterprise security requirement and includes infrastructure deployment, network access controls, troubleshooting, and Azure CLI configuration validation.
+The project simulates a real-world enterprise security scenario involving network segmentation, access controls, troubleshooting, and automated configuration validation.
 
-**Project status:** Network configuration completed and validated using Azure CLI. Live traffic testing has not yet been performed.
+**Project Status:** Azure network infrastructure deployed. Configuration validated using Azure CLI and a Bash validation script (8/8 checks passed). Live traffic testing has not been performed.
 
 ## Business Problem
 
-Organizations often operate application and administrative systems within the same cloud environment.
+Enterprise environments frequently contain application servers and administrative systems that require different levels of access.
 
-Without appropriately configured network security controls, systems may communicate more broadly than business requirements allow, increasing the potential for lateral movement following a security incident.
+If unnecessary network communication is permitted, a compromised application server could potentially provide an attacker with additional paths into administrative infrastructure.
 
-**Objective:** Restrict application-initiated connections to administrative infrastructure while maintaining a manageable Azure network architecture.
+**Objective:** Configure network restrictions designed to prevent application-subnet systems from initiating connections to the administration subnet.
 
 ## Technologies Used
 
 - Microsoft Azure
-- Azure Virtual Network (VNet)
+- Azure Virtual Networks
 - Azure Subnets
-- Network Security Groups (NSGs)
-- Azure Cloud Shell
+- Azure Network Security Groups
 - Azure CLI
-- Azure Network Watcher
+- Azure Cloud Shell (Bash)
+- Bash scripting
+- Git and GitHub
 
 ## Architecture
+
 ```mermaid
 flowchart TB
     V["Azure VNet: 10.10.0.0/16"]
@@ -34,9 +36,10 @@ flowchart TB
     B["Administration Subnet: 10.10.2.0/24 | nsg-admin"]
     V --> A
     V --> B
-    A -. "App to Admin: DENY" .-> B
+    A -. "Configured App-to-Admin DENY" .-> B
 ```
-**Azure Region:** Central US
+
+**Azure Region:** Central US (`centralus`)
 
 **Resource Group:** `rg-enterprise-network-lab`
 
@@ -46,19 +49,20 @@ flowchart TB
 
 | Subnet | Address Range | Associated NSG |
 |---|---|---|
-| Application | `10.10.1.0/24` | `nsg-app` |
-| Administration | `10.10.2.0/24` | `nsg-admin` |
+| Application | 10.10.1.0/24 | nsg-app |
+| Administration | 10.10.2.0/24 | nsg-admin |
 
-Both subnets are deployed within the same Azure Virtual Network.
+Both subnets are located within the same Azure Virtual Network.
+
+Subnet separation alone does not enforce network isolation. NSG rules provide the configured traffic restrictions.
 
 ## Security Implementation
 
 ### Application Subnet
 
-The `nsg-app` Network Security Group contains a custom outbound rule:
-
 | Setting | Value |
 |---|---|
+| NSG | nsg-app |
 | Rule | Deny-App-to-Admin |
 | Direction | Outbound |
 | Priority | 100 |
@@ -69,10 +73,9 @@ The `nsg-app` Network Security Group contains a custom outbound rule:
 
 ### Administration Subnet
 
-The `nsg-admin` Network Security Group contains a complementary inbound restriction:
-
 | Setting | Value |
 |---|---|
+| NSG | nsg-admin |
 | Rule | Deny-App-Inbound |
 | Direction | Inbound |
 | Priority | 100 |
@@ -81,60 +84,242 @@ The `nsg-admin` Network Security Group contains a complementary inbound restrict
 | Protocol / Ports | Any |
 | Action | Deny |
 
-These rules are designed to prevent application-subnet systems from initiating connections to the administration subnet.
+The rules provide complementary controls intended to restrict application-initiated access to administrative infrastructure.
+
+They do not represent a complete production network security policy.
+
+## Repository Structure
+
+```text
+azure-enterprise-network-segmentation/
+├── README.md
+├── scripts/
+│   ├── deploy.sh
+│   ├── validate.sh
+│   └── teardown.sh
+└── screenshots/
+    └── README.md
+```
+
+- `deploy.sh` defines the infrastructure deployment steps.
+- `validate.sh` checks deployed Azure configuration.
+- `teardown.sh` provides controlled resource group cleanup.
+- `screenshots/` contains evidence captured during implementation and validation.
+
+The teardown script should be added before treating this repository structure as complete.
+
+## How to Run
+
+### Prerequisites
+
+- An Azure subscription with sufficient permissions
+- Azure CLI
+- Bash
+- Git for local repository cloning
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/mustaafawaalee/azure-enterprise-network-segmentation.git
+cd azure-enterprise-network-segmentation
+```
+
+### 2. Verify Azure authentication
+
+In Azure Cloud Shell, authentication is generally available automatically.
+
+For a local Azure CLI installation:
+
+```bash
+az login
+```
+
+Verify the selected Azure subscription:
+
+```bash
+az account show --query "{Name:name,IsDefault:isDefault}" -o table
+```
+
+### 3. Deploy the lab
+
+```bash
+bash scripts/deploy.sh
+```
+
+This script is designed to create:
+
+- One Azure resource group
+- One virtual network
+- Two subnets
+- Two Network Security Groups
+- Two custom deny rules
+- Both subnet-to-NSG associations
+
+**Status:** Deployment script committed but not yet tested end-to-end.
+
+The script is intended for a clean environment and refuses to overwrite an existing lab resource group.
+
+Review outbound-access settings and potential resource costs before testing deployment.
+
+### 4. Validate the infrastructure
+
+```bash
+bash scripts/validate.sh
+```
+
+The validation script checks:
+
+- Application NSG direction
+- Application NSG action
+- Application NSG priority
+- Administration NSG direction
+- Administration NSG action
+- Administration NSG priority
+- Application subnet NSG association
+- Administration subnet NSG association
+
+**Observed result: 8/8 configuration checks passed.**
+
+The validation script was successfully executed against the deployed Azure lab.
+
+### 5. Clean up resources
+
+After saving project evidence and reviewing the resource group contents:
+
+```bash
+bash scripts/teardown.sh
+```
+
+The teardown script is intended to request confirmation before deleting the dedicated lab resource group.
+
+**Status:** Teardown execution has not been verified.
+
+Deleting the resource group permanently removes the Azure resources contained within it.
 
 ## Troubleshooting Experience
 
-During implementation, I discovered that the administration NSG rule had been configured with the incorrect traffic direction.
+### Problem
 
-**Problem:** The intended inbound rule was configured as an outbound rule.
+During implementation, the administration NSG rule was initially configured with the incorrect direction.
 
-**Investigation:** I used Azure CLI to inspect the rule's properties and discovered that its direction was set to `Outbound`.
+The intended inbound deny rule had been configured as an outbound rule.
 
-**Resolution:** I corrected the configuration so the rule used the intended `Inbound` direction.
+### Investigation
 
-**Verification:** Azure CLI confirmed that the corrected rule had direction `Inbound`, action `Deny`, and priority `100`.
+I used Azure CLI to inspect the rule configuration.
 
-This reinforced the importance of validating security configuration instead of assuming a deployment is correct.
+The command output revealed:
 
-## Validation Results
+- Rule: Deny-App-Inbound
+- Actual direction: Outbound
+- Expected direction: Inbound
+
+### Resolution
+
+I corrected the rule to use the intended inbound direction.
+
+### Verification
 
 I used Azure CLI to confirm:
 
-- The application NSG outbound deny rule was configured correctly.
-- The administration NSG inbound deny rule was configured correctly after troubleshooting.
-- Both subnets were associated with their intended NSGs.
+- Direction: Inbound
+- Access: Deny
+- Priority: 100
 
-**Validation limitation:** These checks confirm Azure resource configuration, not actual packet delivery. Live connectivity testing with suitable test workloads remains outstanding.
+This experience demonstrated why cloud security configurations should be verified after deployment rather than assumed to be correct.
+
+## Automated Configuration Validation
+
+I created and executed a Bash validation script that checks the NSG rules and subnet associations against the expected configuration.
+
+### Actual Validation Results
+
+| Validation Check | Result |
+|---|---|
+| nsg-app direction | PASS |
+| nsg-app access | PASS |
+| nsg-app priority | PASS |
+| nsg-admin direction | PASS |
+| nsg-admin access | PASS |
+| nsg-admin priority | PASS |
+| snet-app NSG association | PASS |
+| snet-admin NSG association | PASS |
+
+**Final result: 8/8 PASS**
+
+These results demonstrate that the checked Azure configuration properties matched the expected values.
+
+They do not establish that actual network packets were blocked.
+
+## Design Decisions
+
+### Why two deny rules instead of one?
+
+### Why doesn't the App-to-Admin deny break Admin-to-App SSH?
+
+### What default rule does priority 100 override?
+
+## Live Traffic Test Plan
+
+**Status:** Not performed.
+
+| Test | Predicted | Actual | Rule That Matched |
+|---|---|---|---|
+| App→Admin TCP 22 | | | |
+| Admin→App TCP 22 | | | |
+| App→Admin with admin inbound rule removed | | | |
+| App→Admin with app outbound rule removed | | | |
+
+The table will be completed only after suitable connectivity tests have been performed.
 
 ## What I Would Do Differently in an Enterprise Environment
 
-For a production deployment, I would evaluate:
+### 1. Implement Least-Privilege Network Access
 
-1. **Infrastructure as Code:** Use Terraform or Bicep to deploy and version-control network infrastructure consistently.
-2. **Least-privilege connectivity:** Define approved communication paths and allow only required protocols and ports.
-3. **Centralized monitoring:** Use appropriate network telemetry, Azure Monitor, and alerting to investigate suspicious activity.
-4. **Network architecture:** Evaluate hub-and-spoke connectivity and centralized security controls based on business requirements.
-5. **Security governance:** Apply Azure Policy, RBAC, change management, and configuration validation.
-6. **High availability:** Design critical networking components around availability and recovery requirements.
-7. **Cost management:** Evaluate the operational benefits and costs of additional services before deploying them.
+I would define approved traffic flows and implement explicit allow rules for necessary connections, combined with appropriate deny-all restrictions.
 
-The lab intentionally uses a smaller architecture than a full production environment.
+This would provide stronger network segmentation than relying only on two targeted deny rules.
+
+### 2. Implement Infrastructure as Code
+
+I would use Terraform or Bicep to deploy infrastructure consistently through version-controlled definitions.
+
+I would also implement automated configuration checks and code review to identify incorrect NSG properties before production deployment.
+
+### 3. Implement Monitoring and Operational Controls
+
+I would evaluate network diagnostics, security monitoring, alerting, Azure Policy, and documented change management.
+
+Production architecture would also account for operational requirements, availability, and service costs.
 
 ## Lessons Learned
 
-This project strengthened my practical understanding of Azure networking, subnet segmentation, NSG rule direction, security rule priorities, and configuration verification with Azure CLI.
+This project strengthened my understanding of:
 
-The main takeaway was the importance of verifying security controls after implementation and documenting how configuration mistakes are identified and corrected.
+- Azure virtual networking
+- Subnet address planning
+- Network Security Group associations
+- NSG rule direction and priority
+- Azure CLI troubleshooting
+- Bash scripting
+- Automated infrastructure configuration validation
+- GitHub technical documentation
+
+The most important lesson was that creating infrastructure is only part of the engineering process.
+
+Configurations must be validated, troubleshooting must be documented, and automation should be designed to produce repeatable results.
 
 ## Next Improvements
 
-- Conduct live connectivity testing.
-- Add infrastructure deployment automation.
-- Publish an architecture diagram and redacted configuration screenshots.
-- Expand validation with repeatable security checks.
-- Document cleanup and any incurred Azure costs.
+- Test deployment automation in a clean environment.
+- Complete the Design Decisions section.
+- Conduct live network connectivity testing.
+- Expand validation to include additional network security properties.
+- Verify teardown automation and resource cleanup.
+- Document actual costs if applicable.
 
 ## Project Context
 
-This is an independently built educational lab representing a realistic enterprise networking scenario. It is not presented as a production deployment or work completed for an employer.
+This project is an independently built Azure educational lab based on a realistic enterprise networking scenario.
+
+It does not represent a production deployment or work completed for an employer.
