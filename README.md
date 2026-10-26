@@ -27,7 +27,15 @@ Without appropriately configured network security controls, systems may communic
 - Azure Network Watcher
 
 ## Architecture
-
+```mermaid
+flowchart TB
+    V["Azure VNet: 10.10.0.0/16"]
+    A["Application Subnet: 10.10.1.0/24 | nsg-app"]
+    B["Administration Subnet: 10.10.2.0/24 | nsg-admin"]
+    V --> A
+    V --> B
+    A -. "App to Admin: DENY" .-> B
+```
 **Azure Region:** Central US
 
 **Resource Group:** `rg-enterprise-network-lab`
